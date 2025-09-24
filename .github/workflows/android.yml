@@ -1,26 +1,54 @@
-name: Android CI
+# Name of the GitHub Actions workflow.
+name: Android CI Build
 
+# Controls when the workflow will run.
 on:
+  # Triggers the workflow on push events for the "main" branch.
   push:
-    branches: [ "master" ]
-  pull_request:
-    branches: [ "master" ]
+    branches: [ "main" ]
+  # Also allows you to run this workflow manually from the Actions tab.
+  workflow_dispatch:
 
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel.
 jobs:
   build:
-
+    # The type of runner that the job will run on.
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v4
-    - name: set up JDK 11
-      uses: actions/setup-java@v4
-      with:
-        java-version: '11'
-        distribution: 'temurin'
-        cache: gradle
+      # Step 1: Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it.
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-    - name: Grant execute permission for gradlew
-      run: chmod +x gradlew
-    - name: Build with Gradle
-      run: ./gradlew build
+      # Step 2: Sets up the specific version of Java (JDK) required for Android builds.
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      # Step 3: Sets up Gradle caching to speed up build times.
+      - name: Setup Gradle Cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('/*.gradle*', '/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      # Step 4: Grants execute permission to the gradlew script. This is required for Linux runners.
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
+
+      # Step 5: Builds the debug APK.
+      - name: Build with Gradle
+        run: ./gradlew assembleDebug
+
+      # Step 6: Uploads the build artifact (the APK) so you can download it from the workflow's summary page.
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-debug-apk # The name of the artifact file.
+          path: app/build/outputs/apk/debug/app-debug.apk # The path to the generated APK.
